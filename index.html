@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>정산 — 누가 누구에게 얼마</title>
+<style>
+  :root{
+    --bg:#f2f4f6; --card:#ffffff; --card2:#f7f8fa; --line:#edf0f3;
+    --txt:#191f28; --sub:#8b95a1; --accent:#3182f6; --accent2:#3182f6;
+    --kakao:#fee500; --kakao-txt:#191600;
+    --good:#3182f6; --bad:#f04452; --warn:#ffb454;
+    --radius:18px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+    line-height:1.5; padding:0 0 90px;
+  }
+  .wrap{max-width:480px; margin:0 auto; padding:0}
+  .topbar{position:sticky; top:0; z-index:30; background:var(--kakao); padding:16px 18px 15px;
+    display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  .topbar h1{font-size:19px; margin:0; letter-spacing:-.6px; color:var(--kakao-txt); font-weight:800}
+  .topbar .sub{color:#7a6f00; font-size:12px; margin-top:1px; font-weight:500}
+  .topbar .reset{background:rgba(0,0,0,.06); color:#5c5400; border:none; border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:600}
+  .body{padding:14px 14px 0}
+  .card{background:var(--card); border:none; border-radius:var(--radius); padding:18px; margin-bottom:13px;
+    box-shadow:0 2px 12px rgba(0,0,0,.03)}
+  .card h2{font-size:13px; margin:0 0 14px; color:var(--sub); font-weight:700; letter-spacing:0}
+  .row{display:flex; gap:8px; align-items:center}
+  input,select,button,textarea{font-family:inherit; font-size:15px}
+  input[type=text],input[type=number],select{
+    background:var(--card2); border:1.5px solid transparent; color:var(--txt);
+    border-radius:13px; padding:13px 14px; width:100%; outline:none; font-weight:500;
+  }
+  input::placeholder{color:#b0b8c1}
+  input:focus,select:focus{border-color:var(--accent); background:#fff}
+  button{cursor:pointer; border:none; border-radius:13px; padding:13px 16px; font-weight:700; color:var(--kakao-txt); background:var(--kakao)}
+  button.ghost{background:var(--card2); color:var(--sub); font-weight:600}
+  button.sm{padding:9px 12px; font-size:13px}
+  button:active{transform:scale(.97)}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px}
+  .chip{display:inline-flex; align-items:center; gap:6px; background:var(--card2); border:none;
+    border-radius:999px; padding:9px 12px 9px 15px; font-size:14.5px; font-weight:600}
+  .chip .x{color:#b0b8c1; cursor:pointer; font-size:17px; line-height:1; padding:0 2px}
+  .chip .x:hover{color:var(--bad)}
+  .muted{color:var(--sub); font-size:13px}
+  .expense{background:var(--card2); border:none; border-radius:15px; padding:14px 15px; margin-bottom:10px}
+  .expense .top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
+  .expense .title{font-weight:700; font-size:15.5px}
+  .expense .amt{font-weight:800; white-space:nowrap; font-size:15.5px}
+  .expense .meta{color:var(--sub); font-size:12.5px; margin-top:4px}
+  .expense .del{color:#c3cad2; cursor:pointer; font-size:17px; line-height:1; margin-top:4px}
+  .expense .del:hover{color:var(--bad)}
+  .split-people{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+  .ppl-toggle{font-size:13.5px; padding:9px 14px; border-radius:999px; border:1.5px solid var(--line);
+    background:#fff; color:var(--sub); cursor:pointer; user-select:none; font-weight:600}
+  .ppl-toggle.on{background:#191f28; border-color:#191f28; color:#fff}
+  .seg{display:flex; background:var(--card2); border:none; border-radius:13px; padding:4px; gap:3px}
+  .seg button{flex:1; background:transparent; color:var(--sub); font-weight:600; padding:10px 6px; border-radius:10px; font-size:13.5px}
+  .seg button.on{background:#fff; color:var(--txt); font-weight:700; box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .field{margin-bottom:11px}
+  .field label{display:block; font-size:12.5px; color:var(--sub); margin-bottom:6px; margin-left:3px; font-weight:600}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+  .custom-row{display:flex; align-items:center; gap:8px; margin-top:9px}
+  .custom-row .nm{flex:1; font-size:14.5px; font-weight:600}
+  .custom-row input{width:130px; text-align:right}
+  .addbtn{width:100%; margin-top:14px; padding:15px; font-size:16px; border-radius:14px}
+  .result-line{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:15px 16px; margin-bottom:10px}
+  .result-line .who{display:flex; align-items:center; gap:9px; font-size:15.5px; font-weight:600}
+  .result-line .arrow{color:#c3cad2; font-weight:700}
+  .result-line .pay{font-weight:800; font-size:16.5px; white-space:nowrap; color:var(--accent)}
+  .avatar{width:30px; height:30px; border-radius:50%; background:var(--kakao); color:var(--kakao-txt);
+    display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0}
+  .balrow{display:flex; justify-content:space-between; padding:11px 2px; border-bottom:1px solid var(--line); font-size:14.5px; font-weight:500}
+  .balrow:last-child{border-bottom:none}
+  .pos{color:var(--good); font-weight:700} .neg{color:var(--bad); font-weight:700}
+  .empty{color:var(--sub); text-align:center; padding:22px 8px; font-size:14px}
+  .summary{display:flex; justify-content:space-between; font-size:13.5px; color:var(--sub); margin-top:12px; padding-top:13px; border-top:1px solid var(--line); font-weight:600}
+  .summary b{color:var(--txt); font-weight:800; font-size:16px}
+  .total{font-size:26px; font-weight:800; letter-spacing:-1px; margin:2px 0}
+  .actions{display:flex; gap:8px; margin-top:6px}
+  details summary{cursor:pointer; color:var(--sub); font-size:13px; list-style:none; padding:6px 0; font-weight:600}
+  details summary::-webkit-details-marker{display:none}
+  .toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+    background:#191f28; color:#fff; padding:13px 20px; border-radius:999px; font-size:14px; opacity:0;
+    transition:.25s; pointer-events:none; z-index:50; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>정산하기</h1>
+      <div class="sub">누가 누구에게 얼마 보낼지 자동 계산</div>
+    </div>
+    <button class="reset" onclick="resetAll()">초기화</button>
+  </div>
+  <div class="body">
+
+  <!-- 참여자 -->
+  <div class="card">
+    <h2>1. 참여자</h2>
+    <div class="row">
+      <input type="text" id="nameInput" placeholder="이름 입력 후 추가" onkeydown="if(event.key==='Enter')addPerson()">
+      <button onclick="addPerson()">추가</button>
+    </div>
+    <div class="chips" id="peopleChips"></div>
+  </div>
+
+  <!-- 지출 추가 -->
+  <div class="card">
+    <h2>2. 지출 추가</h2>
+    <div class="field">
+      <label>내용</label>
+      <input type="text" id="expTitle" placeholder="예: 저녁 삼겹살, 택시, 카페">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label>금액 (원)</label>
+        <input type="number" id="expAmount" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="field">
+        <label>낸 사람</label>
+        <select id="expPayer"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>나누는 방식</label>
+      <div class="seg" id="modeSeg">
+        <button data-mode="all" class="on" onclick="setMode('all')">전체 1/N</button>
+        <button data-mode="some" onclick="setMode('some')">일부만 1/N</button>
+        <button data-mode="custom" onclick="setMode('custom')">금액 직접</button>
+      </div>
+    </div>
+
+    <div id="someBox" style="display:none">
+      <div class="muted">이 지출을 나눠 낼 사람을 고르세요</div>
+      <div class="split-people" id="somePeople"></div>
+    </div>
+
+    <div id="customBox" style="display:none">
+      <div class="muted">각자 부담할 금액을 입력하세요</div>
+      <div id="customRows"></div>
+      <div class="summary"><span>입력 합계</span><span id="customSum">0원</span></div>
+    </div>
+
+    <button class="addbtn" onclick="addExpense()">＋ 지출 추가</button>
+  </div>
+
+  <!-- 지출 목록 -->
+  <div class="card">
+    <h2>3. 지출 내역</h2>
+    <div id="expenseList"></div>
+    <div class="summary"><span>총 지출</span><b id="grandTotal">0원</b></div>
+  </div>
+
+  <!-- 정산 결과 -->
+  <div class="card">
+    <h2>4. 정산 결과</h2>
+    <div id="settleResult"></div>
+    <details id="balanceDetails" style="margin-top:6px">
+      <summary>＋ 개인별 잔액 자세히 보기</summary>
+      <div id="balanceList" style="margin-top:8px"></div>
+    </details>
+  </div>
+
+  </div><!-- /.body -->
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- 상태 ----------
+let state = { people: [], expenses: [], mode: 'all', someSelected: new Set() };
+
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem('jeongsan_v1'));
+    if(s){ state.people = s.people||[]; state.expenses = s.expenses||[]; }
+  }catch(e){}
+}
+function save(){
+  localStorage.setItem('jeongsan_v1', JSON.stringify({people:state.people, expenses:state.expenses}));
+}
+
+// ---------- 유틸 ----------
+const won = n => Math.round(n).toLocaleString('ko-KR') + '원';
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+// ---------- 참여자 ----------
+function addPerson(){
+  const el = document.getElementById('nameInput');
+  const name = el.value.trim();
+  if(!name) return;
+  if(state.people.includes(name)){ toast('이미 있는 이름이에요'); return; }
+  state.people.push(name);
+  el.value=''; el.focus();
+  save(); render();
+}
+function removePerson(name){
+  const used = state.expenses.some(e => e.payer===name || (e.shares && e.shares[name]!=null) || (e.among&&e.among.includes(name)));
+  if(used && !confirm(`'${name}'님이 포함된 지출이 있어요. 그래도 삭제할까요? (관련 지출도 삭제됩니다)`)) return;
+  state.people = state.people.filter(p=>p!==name);
+  state.expenses = state.expenses.filter(e => e.payer!==name && (!e.among || !e.among.includes(name)) && (!e.shares || e.shares[name]==null));
+  state.someSelected.delete(name);
+  save(); render();
+}
+
+// ---------- 분배 방식 ----------
+function setMode(m){
+  state.mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.mode===m));
+  document.getElementById('someBox').style.display = m==='some'?'block':'none';
+  document.getElementById('customBox').style.display = m==='custom'?'block':'none';
+  if(m==='some') renderSomePeople();
+  if(m==='custom') renderCustomRows();
+}
+function renderSomePeople(){
+  const box = document.getElementById('somePeople');
+  box.innerHTML='';
+  if(state.people.length===0){ box.innerHTML='<div class="muted">먼저 참여자를 추가하세요</div>'; return; }
+  state.people.forEach(p=>{
+    const b=document.createElement('button');
+    b.className='ppl-toggle'+(state.someSelected.has(p)?' on':'');
+    b.textContent=p;
+    b.onclick=()=>{ state.someSelected.has(p)?state.someSelected.delete(p):state.someSelected.add(p); renderSomePeople(); };
+    box.appendChild(b);
+  });
+}
+function renderCustomRows(){
+  const box=document.getElementById('customRows');
+  box.innerHTML='';
+  if(state.people.length===0){ box.innerHTML='<div class="muted">먼저 참여자를 추가하세요</div>'; }
+  state.people.forEach(p=>{
+    const row=document.createElement('div'); row.className='custom-row';
+    row.innerHTML=`<span class="nm">${p}</span>`;
+    const inp=document.createElement('input');
+    inp.type='number'; inp.inputMode='numeric'; inp.placeholder='0'; inp.dataset.name=p;
+    inp.oninput=updateCustomSum;
+    row.appendChild(inp); box.appendChild(row);
+  });
+  updateCustomSum();
+}
+function updateCustomSum(){
+  let sum=0;
+  document.querySelectorAll('#customRows input').forEach(i=> sum += Number(i.value)||0);
+  document.getElementById('customSum').textContent=won(sum);
+}
+
+// ---------- 지출 ----------
+function addExpense(){
+  const title = document.getElementById('expTitle').value.trim() || '지출';
+  const amount = Number(document.getElementById('expAmount').value);
+  const payer = document.getElementById('expPayer').value;
+  if(state.people.length===0){ toast('참여자를 먼저 추가하세요'); return; }
+  if(!payer){ toast('낸 사람을 선택하세요'); return; }
+
+  let exp;
+  if(state.mode==='custom'){
+    const shares={}; let sum=0;
+    document.querySelectorAll('#customRows input').forEach(i=>{
+      const v=Number(i.value)||0; if(v>0){ shares[i.dataset.name]=v; sum+=v; }
+    });
+    if(sum<=0){ toast('금액을 입력하세요'); return; }
+    exp = { id:Date.now(), title, amount:sum, payer, type:'custom', shares };
+  } else {
+    if(!amount || amount<=0){ toast('금액을 입력하세요'); return; }
+    let among;
+    if(state.mode==='all') among = [...state.people];
+    else { among = [...state.someSelected]; if(among.length===0){ toast('나눠 낼 사람을 고르세요'); return; } }
+    exp = { id:Date.now(), title, amount, payer, type:'even', among };
+  }
+  state.expenses.push(exp);
+  // 입력 초기화
+  document.getElementById('expTitle').value='';
+  document.getElementById('expAmount').value='';
+  state.someSelected.clear();
+  setMode('all');
+  save(); render();
+  toast('추가됐어요');
+}
+function removeExpense(id){
+  state.expenses = state.expenses.filter(e=>e.id!==id);
+  save(); render();
+}
+
+// ---------- 정산 계산 (거래 최소화) ----------
+function computeBalances(){
+  const bal={}; state.people.forEach(p=>bal[p]=0);
+  state.expenses.forEach(e=>{
+    if(bal[e.payer]==null) bal[e.payer]=0;
+    bal[e.payer]+=e.amount; // 낸 만큼 +
+    if(e.type==='even'){
+      const each=e.amount/e.among.length;
+      e.among.forEach(p=>{ if(bal[p]==null)bal[p]=0; bal[p]-=each; }); // 부담만큼 -
+    } else {
+      for(const p in e.shares){ if(bal[p]==null)bal[p]=0; bal[p]-=e.shares[p]; }
+    }
+  });
+  return bal;
+}
+function settle(bal){
+  const creditors=[], debtors=[];
+  for(const p in bal){
+    const v=Math.round(bal[p]);
+    if(v>0) creditors.push({p,v});
+    else if(v<0) debtors.push({p,v:-v});
+  }
+  creditors.sort((a,b)=>b.v-a.v); debtors.sort((a,b)=>b.v-a.v);
+  const tx=[]; let i=0,j=0;
+  while(i<debtors.length && j<creditors.length){
+    const amt=Math.min(debtors[i].v, creditors[j].v);
+    if(amt>0) tx.push({from:debtors[i].p, to:creditors[j].p, amt});
+    debtors[i].v-=amt; creditors[j].v-=amt;
+    if(debtors[i].v<=0) i++;
+    if(creditors[j].v<=0) j++;
+  }
+  return tx;
+}
+
+// ---------- 렌더 ----------
+function render(){
+  // 참여자 칩
+  const chips=document.getElementById('peopleChips');
+  chips.innerHTML='';
+  if(state.people.length===0) chips.innerHTML='<div class="muted">정산할 사람을 추가하세요</div>';
+  state.people.forEach(p=>{
+    const c=document.createElement('span'); c.className='chip';
+    c.innerHTML=`${p} <span class="x" title="삭제">×</span>`;
+    c.querySelector('.x').onclick=()=>removePerson(p);
+    chips.appendChild(c);
+  });
+  // 낸 사람 select
+  const payer=document.getElementById('expPayer');
+  const prev=payer.value;
+  payer.innerHTML='<option value="">선택</option>'+state.people.map(p=>`<option>${p}</option>`).join('');
+  if(state.people.includes(prev)) payer.value=prev;
+  // 현재 모드 보조 UI 갱신
+  if(state.mode==='some') renderSomePeople();
+  if(state.mode==='custom') renderCustomRows();
+
+  // 지출 목록
+  const list=document.getElementById('expenseList');
+  list.innerHTML='';
+  if(state.expenses.length===0){ list.innerHTML='<div class="empty">아직 지출이 없어요</div>'; }
+  let total=0;
+  state.expenses.forEach(e=>{
+    total+=e.amount;
+    let metaWho;
+    if(e.type==='even') metaWho = e.among.length===state.people.length && state.people.length>0 ? '전체' : e.among.join(', ');
+    else metaWho = Object.entries(e.shares).map(([n,v])=>`${n} ${won(v)}`).join(' · ');
+    const div=document.createElement('div'); div.className='expense';
+    div.innerHTML=`
+      <div class="top">
+        <div>
+          <div class="title">${e.title}</div>
+          <div class="meta">💳 ${e.payer} 결제 · 👥 ${metaWho}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="amt">${won(e.amount)}</div>
+          <div class="del" title="삭제">🗑</div>
+        </div>
+      </div>`;
+    div.querySelector('.del').onclick=()=>removeExpense(e.id);
+    list.appendChild(div);
+  });
+  document.getElementById('grandTotal').textContent=won(total);
+
+  // 정산 결과
+  const bal=computeBalances();
+  const tx=settle(bal);
+  const res=document.getElementById('settleResult');
+  res.innerHTML='';
+  if(state.expenses.length===0){
+    res.innerHTML='<div class="empty">지출을 추가하면 정산 결과가 나와요</div>';
+  } else if(tx.length===0){
+    res.innerHTML='<div class="empty">✅ 딱 맞아요! 주고받을 게 없어요</div>';
+  } else {
+    tx.forEach(t=>{
+      const d=document.createElement('div'); d.className='result-line';
+      d.innerHTML=`
+        <div class="who"><span class="avatar">${t.from[0]}</span><b>${t.from}</b> <span class="arrow">→</span> <span class="avatar">${t.to[0]}</span><b>${t.to}</b></div>
+        <div class="pay">${won(t.amt)}</div>`;
+      res.appendChild(d);
+    });
+    const s=document.createElement('div'); s.className='summary';
+    s.innerHTML=`<span>이렇게 보내면 정산 끝</span><span>송금 <b>${tx.length}</b>건</span>`;
+    res.appendChild(s);
+  }
+
+  // 개인별 잔액
+  const bl=document.getElementById('balanceList');
+  bl.innerHTML='';
+  state.people.forEach(p=>{
+    const v=Math.round(bal[p]||0);
+    const cls=v>0?'pos':v<0?'neg':'';
+    const label=v>0?`+${won(v)} 받을 돈`:v<0?`${won(v)} 낼 돈`:'0원';
+    const r=document.createElement('div'); r.className='balrow';
+    r.innerHTML=`<span>${p}</span><span class="${cls}">${label}</span>`;
+    bl.appendChild(r);
+  });
+}
+
+function resetAll(){
+  if(!confirm('참여자와 지출 내역을 모두 지울까요?')) return;
+  state.people=[]; state.expenses=[]; state.someSelected.clear();
+  save(); setMode('all'); render(); toast('초기화됐어요');
+}
+
+// 시작
+load(); render();
+</script>
+</body>
+</html>
