@@ -430,7 +430,7 @@ function render(){
       d.innerHTML=`
         <div class="who"><span class="avatar">${t.from[0]}</span><b>${t.from}</b> <span class="arrow">→</span> <span class="avatar">${t.to[0]}</span><b>${t.to}</b></div>
         <div class="rline-right"><span class="pay">${won(t.amt)}</span><button class="sendbtn" type="button">송금</button></div>`;
-      d.querySelector('.sendbtn').onclick=()=>sendMoney(t.to, t.amt);
+      d.querySelector('.sendbtn').onclick=()=>sendMoney(t.from, t.to, t.amt);
       res.appendChild(d);
     });
     const s=document.createElement('div'); s.className='summary';
@@ -559,12 +559,12 @@ function importFromHash(){
 }
 
 // ---------- 송금 바로가기 (토스) ----------
-function sendMoney(to, amount){
+function sendMoney(from, to, amount){
   state.tossIds = state.tossIds || {};
   let handle = state.tossIds[to];
   if(!handle){
     const ans = window.prompt(
-      `${to}님에게 토스로 ${won(amount)} 송금합니다.\n\n받는 사람의 toss.me 아이디를 입력하세요.\n\n[확인 방법] 토스 앱 → 전체 → 검색 '토스아이디'\n→ 보이는 영문 아이디 (toss.me/●●● 의 ●●● 부분)\n\n모르면 비우고 확인 → 금액만 복사할게요.`, '');
+      `${to}님에게 토스로 ${won(amount)} 송금합니다.\n\n받는 사람의 toss.me 아이디를 입력하세요.\n\n[확인 방법] 토스 앱 → 전체 → 검색 '토스아이디'\n→ 보이는 영문 아이디 (toss.me/●●● 의 ●●● 부분)\n\n모르면 비우고 확인 → 송금 내용이 텍스트로 복사돼요.`, '');
     if(ans===null) return; // 취소
     handle = (ans||'').trim().replace(/^https?:\/\//,'').replace(/^toss\.me\//i,'').replace(/\/.*$/,'');
     if(handle){ state.tossIds[to]=handle; save(); }
@@ -574,9 +574,10 @@ function sendMoney(to, amount){
     window.open(url, '_blank');
     toast(`토스 송금 열기 — ${to} ${won(amount)}`);
   } else {
-    // 토스 아이디 없으면 금액만 복사
-    try{ navigator.clipboard.writeText(String(Math.round(amount))); toast('받는 정보가 없어 금액만 복사했어요'); }
-    catch(e){ window.prompt('이 금액을 송금하세요', String(Math.round(amount))); }
+    // 토스 아이디 없으면 '누가 누구에게 얼마' 문구를 복사
+    const text = `${from}님이 ${to}님에게 ${won(amount)} 보내기`;
+    try{ navigator.clipboard.writeText(text); toast('송금 내용 복사됨 — ' + text); }
+    catch(e){ window.prompt('아래 내용을 복사해 보내세요', text); }
   }
 }
 // 받는 사람 토스 아이디 초기화(이름 삭제 시 함께 정리)
