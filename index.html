@@ -436,6 +436,9 @@ function render(){
     const s=document.createElement('div'); s.className='summary';
     s.innerHTML=`<span>이렇게 보내면 정산 끝</span><span>송금 <b>${tx.length}</b>건</span>`;
     res.appendChild(s);
+    const hint=document.createElement('div'); hint.className='muted'; hint.style.cssText='margin-top:9px; line-height:1.5; font-size:12.5px';
+    hint.innerHTML=`💡 파란 <b>송금</b>을 누르면 받는 사람 토스로 금액까지 채워져 열려요.<br>토스 아이디 확인: 토스 앱 → <b>전체</b> → 검색 <b>‘토스아이디’</b> → 보이는 영문 아이디(toss.me/●●●의 ●●●)`;
+    res.appendChild(hint);
   }
 
   // 개인별 잔액
@@ -561,7 +564,7 @@ function sendMoney(to, amount){
   let handle = state.tossIds[to];
   if(!handle){
     const ans = window.prompt(
-      `${to}님에게 토스로 ${won(amount)} 송금합니다.\n\n받는 사람의 toss.me 아이디를 입력하세요.\n(토스 앱 → 내 송금 링크 toss.me/●●● 의 ●●● 부분)\n\n모르면 비우고 확인 → 금액만 복사할게요.`, '');
+      `${to}님에게 토스로 ${won(amount)} 송금합니다.\n\n받는 사람의 toss.me 아이디를 입력하세요.\n\n[확인 방법] 토스 앱 → 전체 → 검색 '토스아이디'\n→ 보이는 영문 아이디 (toss.me/●●● 의 ●●● 부분)\n\n모르면 비우고 확인 → 금액만 복사할게요.`, '');
     if(ans===null) return; // 취소
     handle = (ans||'').trim().replace(/^https?:\/\//,'').replace(/^toss\.me\//i,'').replace(/\/.*$/,'');
     if(handle){ state.tossIds[to]=handle; save(); }
