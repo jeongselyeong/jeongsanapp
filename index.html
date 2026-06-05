@@ -76,6 +76,8 @@
   .result-line .who{display:flex; align-items:center; gap:9px; font-size:15.5px; font-weight:600}
   .result-line .arrow{color:#c3cad2; font-weight:700}
   .result-line .pay{font-weight:800; font-size:16.5px; white-space:nowrap; color:var(--accent)}
+  .rline-right{display:flex; align-items:center; gap:10px; flex-shrink:0}
+  .sendbtn{background:#0064ff; color:#fff; border-radius:10px; padding:8px 13px; font-size:13px; font-weight:700; white-space:nowrap}
   .avatar{width:30px; height:30px; border-radius:50%; background:var(--kakao); color:var(--kakao-txt);
     display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0}
   .balrow{display:flex; justify-content:space-between; padding:11px 2px; border-bottom:1px solid var(--line); font-size:14.5px; font-weight:500}
@@ -197,16 +199,16 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script>
 // ---------- 상태 ----------
-let state = { people: [], expenses: [], mode: 'all', someSelected: new Set() };
+let state = { people: [], expenses: [], mode: 'all', someSelected: new Set(), tossIds: {} };
 
 function load(){
   try{
     const s = JSON.parse(localStorage.getItem('jeongsan_v1'));
-    if(s){ state.people = s.people||[]; state.expenses = s.expenses||[]; }
+    if(s){ state.people = s.people||[]; state.expenses = s.expenses||[]; state.tossIds = s.tossIds||{}; }
   }catch(e){}
 }
 function save(){
-  localStorage.setItem('jeongsan_v1', JSON.stringify({people:state.people, expenses:state.expenses}));
+  localStorage.setItem('jeongsan_v1', JSON.stringify({people:state.people, expenses:state.expenses, tossIds:state.tossIds}));
 }
 
 // ---------- 유틸 ----------
@@ -233,6 +235,7 @@ function removePerson(name){
   state.people = state.people.filter(p=>p!==name);
   state.expenses = state.expenses.filter(e => e.payer!==name && (!e.among || !e.among.includes(name)) && (!e.shares || e.shares[name]==null));
   state.someSelected.delete(name);
+  clearTossId(name);
   save(); render();
 }
 
@@ -426,7 +429,8 @@ function render(){
       const d=document.createElement('div'); d.className='result-line';
       d.innerHTML=`
         <div class="who"><span class="avatar">${t.from[0]}</span><b>${t.from}</b> <span class="arrow">→</span> <span class="avatar">${t.to[0]}</span><b>${t.to}</b></div>
-        <div class="pay">${won(t.amt)}</div>`;
+        <div class="rline-right"><span class="pay">${won(t.amt)}</span><button class="sendbtn" type="button">송금</button></div>`;
+      d.querySelector('.sendbtn').onclick=()=>sendMoney(t.to, t.amt);
       res.appendChild(d);
     });
     const s=document.createElement('div'); s.className='summary';
@@ -449,7 +453,7 @@ function render(){
 
 function resetAll(){
   if(!confirm('참여자와 지출 내역을 모두 지울까요?')) return;
-  state.people=[]; state.expenses=[]; state.someSelected.clear();
+  state.people=[]; state.expenses=[]; state.someSelected.clear(); state.tossIds={};
   save(); setMode('all'); render(); toast('초기화됐어요');
 }
 
@@ -550,6 +554,30 @@ function importFromHash(){
   state.people=data.people; state.expenses=data.expenses||[];
   save(); return true;
 }
+
+// ---------- 송금 바로가기 (토스) ----------
+function sendMoney(to, amount){
+  state.tossIds = state.tossIds || {};
+  let handle = state.tossIds[to];
+  if(!handle){
+    const ans = window.prompt(
+      `${to}님에게 토스로 ${won(amount)} 송금합니다.\n\n받는 사람의 toss.me 아이디를 입력하세요.\n(토스 앱 → 내 송금 링크 toss.me/●●● 의 ●●● 부분)\n\n모르면 비우고 확인 → 금액만 복사할게요.`, '');
+    if(ans===null) return; // 취소
+    handle = (ans||'').trim().replace(/^https?:\/\//,'').replace(/^toss\.me\//i,'').replace(/\/.*$/,'');
+    if(handle){ state.tossIds[to]=handle; save(); }
+  }
+  if(handle){
+    const url = `https://toss.me/${encodeURIComponent(handle)}/${Math.round(amount)}`;
+    window.open(url, '_blank');
+    toast(`토스 송금 열기 — ${to} ${won(amount)}`);
+  } else {
+    // 토스 아이디 없으면 금액만 복사
+    try{ navigator.clipboard.writeText(String(Math.round(amount))); toast('받는 정보가 없어 금액만 복사했어요'); }
+    catch(e){ window.prompt('이 금액을 송금하세요', String(Math.round(amount))); }
+  }
+}
+// 받는 사람 토스 아이디 초기화(이름 삭제 시 함께 정리)
+function clearTossId(name){ if(state.tossIds) delete state.tossIds[name]; }
 
 // 시작
 load();
